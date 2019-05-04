@@ -1,0 +1,5 @@
+#include "sdm670-fih-memmap.dtsi"
+#include "sdm670-fih-apr.dtsi"
+#include "sdm670-fih-ddr.dtsi"
+#include "sdm670-fih-mfd.dtsi"
+#include "sdm670-fih-cda.dtsi"

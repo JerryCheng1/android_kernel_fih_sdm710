@@ -1826,7 +1826,7 @@
 			};
 		};
 
-		ter_i2s_data0 {
+		/*ter_i2s_data0 {
 			ter_i2s_data0_sleep: ter_i2s_data0_sleep {
 				mux {
 					pins = "gpio77";
@@ -1878,7 +1878,7 @@
 					output-high;
 				};
 			};
-		};
+		}; */ 
 
 		pmx_sde: pmx_sde {
 			sde_dsi_active: sde_dsi_active {
