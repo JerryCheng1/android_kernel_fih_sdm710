@@ -8,6 +8,7 @@
 		#include "fg-gen3-batterydata-mcnair-lishen-3400mah.dtsi"
 		#include "fg-gen3-batterydata-scud-lishen-3400mah.dtsi"
 		#include "fg-gen3-batterydata-atl-na-3400mah.dtsi"
+		#include "fg-gen3-batterydata-jd-lishen-3400mah.dtsi"
 	};
 };
 
@@ -22,7 +23,7 @@
 	qcom,fg-chg-term-current = <75>; //default: 100mA
 	qcom,fg-sys-term-current = <(-200)>; //default: -125mA
 	qcom,fg-chg-term-base-current = <75>; //default: 75mA
-	qcom,fg-cutoff-current = <500>; //default: 500mA
+	qcom,fg-cutoff-current = <100>; //default: 500mA
 	qcom,fg-delta-soc-thr = <1>; //default: 1
 	qcom,fg-recharge-soc-thr = <95>; //default: 95
 	qcom,fg-rsense-sel = <0>; //default: 2 (Rsense is Battery FET and SMB)
