@@ -176,6 +176,11 @@ struct cam_req_mgr_tbl_slot {
 	uint32_t            req_ready_map;
 	enum crm_req_state  state;
 	uint32_t            inject_delay;
+#ifdef CONFIG_FIH_CAMERA
+	int32_t             dev_hdl;
+	bool                skip_next_frame;
+	bool                is_applied;
+#endif
 };
 
 /**

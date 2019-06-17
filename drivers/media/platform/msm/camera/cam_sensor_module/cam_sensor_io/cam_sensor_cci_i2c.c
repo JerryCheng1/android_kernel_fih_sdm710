@@ -90,6 +90,14 @@ int32_t cam_camera_cci_i2c_read_seq(struct cam_sensor_cci_client *cci_client,
 	cci_ctrl.status = -EFAULT;
 	rc = v4l2_subdev_call(cci_client->cci_subdev,
 		core, ioctl, VIDIOC_MSM_CCI_CFG, &cci_ctrl);
+#ifdef CONFIG_FIH_CAMERA
+    /* MM-CCC-AddCameraBBS-201800607-00+{ */
+	if(rc < 0) {
+		printk("BBox;%s:cci i2c read fail\n", __func__);
+		printk("BBox::UEC;9::1\n");
+	}
+    /* MM-CCC-AddCameraBBS-201800607-00+} */
+#endif
 	rc = cci_ctrl.status;
 	CAM_DBG(CAM_SENSOR, "addr = 0x%x, rc = %d", addr, rc);
 	for (i = 0; i < num_byte; i++) {

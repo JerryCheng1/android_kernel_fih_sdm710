@@ -14,7 +14,15 @@
 #include "cam_req_mgr_dev.h"
 #include "cam_sensor_soc.h"
 #include "cam_sensor_core.h"
-
+#ifdef CONFIG_FIH_CAMERA
+/* MM-JF-porting-FTM-camera-ping-command-00+{ */
+#define FTM
+#ifdef FTM
+static int8_t sensor_id_sysfs = 0;
+extern int8_t g_camera_ping;
+#endif
+/* MM-JF-porting-FTM-camera-ping-command-00+} */
+#endif
 static long cam_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
 {
@@ -131,7 +139,26 @@ static int cam_sensor_init_subdev_params(struct cam_sensor_ctrl_t *s_ctrl)
 
 	return rc;
 }
+#ifdef CONFIG_FIH_CAMERA
+/* MM-JF-porting-FTM-camera-ping-command-00+{ */
+#ifdef FTM
+static ssize_t cam_ping_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	pr_err("show cam_ping=%d", g_camera_ping);
+	return sprintf(buf, "%d\n", g_camera_ping);
+}
+static DEVICE_ATTR(cam_ping, 0444, cam_ping_show, NULL);
 
+static struct attribute *cam_ping_attributes[] = {
+	&dev_attr_cam_ping.attr,
+	NULL
+};
+static const struct attribute_group cam_ping_attr_group = {
+	.attrs = cam_ping_attributes,
+};
+#endif
+/* MM-JF-porting-FTM-camera-ping-command-00+} */
+#endif
 static int32_t cam_sensor_driver_i2c_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
@@ -289,7 +316,16 @@ static int32_t cam_sensor_driver_platform_probe(
 
 	/* Fill platform device id*/
 	pdev->id = soc_info->index;
-
+#ifdef CONFIG_FIH_CAMERA
+/* MM-JF-porting-FTM-camera-ping-command-00+{ */
+#ifdef FTM
+	if(sensor_id_sysfs == 0) {
+		rc = sysfs_create_group(&pdev->dev.parent->kobj, &cam_ping_attr_group);
+		sensor_id_sysfs = 1;
+	}
+#endif
+/* MM-JF-porting-FTM-camera-ping-command-00+} */
+#endif
 	rc = cam_sensor_init_subdev_params(s_ctrl);
 	if (rc)
 		goto free_s_ctrl;

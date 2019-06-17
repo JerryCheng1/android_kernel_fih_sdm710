@@ -43,6 +43,11 @@ config MSMB_CAMERA_DEBUG
     depends on MSMB_CAMERA
     ---help---
       Enable printk() debug for msm camera 2.0
+      
+config FIH_CAMERA
+    bool "FIH camera customized drivers"
+    depends on SPECTRA_CAMERA
+    default n   
 
 if MSMB_CAMERA
 source "drivers/media/platform/msm/camera_v2/Kconfig"

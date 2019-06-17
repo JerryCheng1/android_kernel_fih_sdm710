@@ -1463,7 +1463,18 @@ void cam_ife_cam_cdm_callback(uint32_t handle, void *userdata,
 	}
 
 	ctx = userdata;
-
+#ifdef CONFIG_FIH_CAMERA
+	if (status == CAM_CDM_CB_STATUS_BL_SUCCESS) {
+		complete(&ctx->config_done_complete);
+		CAM_DBG(CAM_ISP,
+			"Called by CDM hdl=%x, udata=%pK, status=%d, cookie=%llu ctx_index=%d",
+			 handle, userdata, status, cookie, ctx->ctx_index);
+	} else {
+		CAM_WARN(CAM_ISP,
+			"Called by CDM hdl=%x, udata=%pK, status=%d, cookie=%llu ctx_index=%d",
+			 handle, userdata, status, cookie, ctx->ctx_index);
+	}
+#else
 	if (status == CAM_CDM_CB_STATUS_BL_SUCCESS) {
 		complete(&ctx->config_done_complete);
 		CAM_DBG(CAM_ISP,
@@ -1474,6 +1485,7 @@ void cam_ife_cam_cdm_callback(uint32_t handle, void *userdata,
 			"Called by CDM hdl=%x, udata=%pK, status=%d, cookie=%llu",
 			 handle, userdata, status, cookie);
 	}
+#endif
 }
 
 /* entry function: acquire_hw */
@@ -1775,11 +1787,24 @@ static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 			CAM_ERR(CAM_ISP, "Failed to apply the configs");
 			return rc;
 		}
-
 		if (cfg->init_packet) {
 			rc = wait_for_completion_timeout(
 				&ctx->config_done_complete,
 				msecs_to_jiffies(30));
+#ifdef CONFIG_FIH_CAMERA
+			if (rc <= 0) {
+				CAM_ERR(CAM_ISP,
+					"config done completion timeout for req_id=%llu rc = %d ,ctx_index = %d",
+					cfg->request_id, rc, ctx->ctx_index);
+				if (rc == 0)
+					rc = -ETIMEDOUT;
+			} else {
+				rc = 0;
+				CAM_DBG(CAM_ISP,
+					"config done Success for req_id=%llu ctx_index = %d",
+					cfg->request_id, ctx->ctx_index);
+			}
+#else
 			if (rc <= 0) {
 				CAM_ERR(CAM_ISP,
 					"config done completion timeout for req_id=%llu rc = %d",
@@ -1792,6 +1817,7 @@ static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 					"config done Success for req_id=%llu",
 					cfg->request_id);
 			}
+#endif
 		}
 	} else {
 		CAM_ERR(CAM_ISP, "No commands to config");

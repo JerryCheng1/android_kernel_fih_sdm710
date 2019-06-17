@@ -68,7 +68,38 @@ int cam_hw_cdm_bl_fifo_pending_bl_rb(struct cam_hw_info *cdm_hw,
 
 	return rc;
 }
+#ifdef CONFIG_FIH_CAMERA
+uint8_t cam_cdm_get_next_bl_tag(struct list_head *bl_list, uint8_t tag)
+{
+	struct cam_cdm_bl_cb_request_entry *node;
+	unsigned int i;
+	bool flag = false;
 
+	list_for_each_entry(node, bl_list, entry) {
+		if (tag == node->bl_tag)
+			flag = true;
+	}
+	if (flag) {
+		for (i = 0; i < CAM_CDM_HWFIFO_SIZE; i++) {
+			if (tag == CAM_CDM_HWFIFO_SIZE - 1)
+				tag = 0;
+			else
+				tag++;
+			flag = false;
+			list_for_each_entry(node, bl_list, entry) {
+				if (tag == node->bl_tag)
+					flag = true;
+			}
+			if (!flag)
+				return tag;
+		}
+	} else {
+		return tag;
+	}
+
+	return -EINVAL;
+}
+#endif
 static int cam_hw_cdm_enable_bl_done_irq(struct cam_hw_info *cdm_hw,
 	bool enable)
 {
@@ -402,7 +433,9 @@ int cam_hw_cdm_submit_bl(struct cam_hw_info *cdm_hw,
 	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
 	uint32_t pending_bl = 0;
 	int write_count = 0;
-
+#ifdef CONFIG_FIH_CAMERA	
+	uint8_t bl_tag_available;
+#endif
 	if (req->data->cmd_arrary_count > CAM_CDM_HWFIFO_SIZE) {
 		pr_info("requested BL more than max size, cnt=%d max=%d",
 			req->data->cmd_arrary_count, CAM_CDM_HWFIFO_SIZE);
@@ -523,6 +556,19 @@ int cam_hw_cdm_submit_bl(struct cam_hw_info *cdm_hw,
 			CAM_DBG(CAM_CDM, "BL commit success BL %d tag=%d", i,
 				core->bl_tag);
 			core->bl_tag++;
+#ifdef CONFIG_FIH_CAMERA			
+			bl_tag_available = cam_cdm_get_next_bl_tag(
+				&core->bl_request_list, core->bl_tag);
+			if (bl_tag_available == (uint8_t)(-EINVAL)) {
+				CAM_ERR(CAM_CDM,
+					"No more bl_tags available tag %d",
+					core->bl_tag);
+				rc = -EINVAL;
+				goto end;
+			} else {
+				core->bl_tag=bl_tag_available;
+			}
+#endif
 			if ((req->data->flag == true) &&
 				(i == (req->data->cmd_arrary_count -
 				1))) {
@@ -533,6 +579,9 @@ int cam_hw_cdm_submit_bl(struct cam_hw_info *cdm_hw,
 			}
 		}
 	}
+#ifdef CONFIG_FIH_CAMERA
+end:
+#endif
 	mutex_unlock(&client->lock);
 	mutex_unlock(&cdm_hw->hw_mutex);
 	return rc;

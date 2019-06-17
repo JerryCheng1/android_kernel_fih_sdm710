@@ -44,9 +44,11 @@
 #define CCI_I2C_QUEUE_1_SIZE 32
 #define CYCLES_PER_MICRO_SEC_DEFAULT 4915
 #define CCI_MAX_DELAY 1000000
-
+#ifndef CONFIG_FIH_CAMERA
 #define CCI_TIMEOUT msecs_to_jiffies(1500)
-
+#else
+#define CCI_TIMEOUT msecs_to_jiffies(500)
+#endif
 #define NUM_MASTERS 2
 #define NUM_QUEUES 2
 
@@ -65,7 +67,11 @@
 #define MAX_LRME_V4l2_EVENTS 30
 
 /* Max bytes that can be read per CCI read transaction */
+#ifndef CONFIG_FIH_CAMERA
 #define CCI_READ_MAX 256
+#else
+#define CCI_READ_MAX 12
+#endif
 #define CCI_I2C_READ_MAX_RETRIES 3
 #define CCI_I2C_MAX_READ 8192
 #define CCI_I2C_MAX_WRITE 8192

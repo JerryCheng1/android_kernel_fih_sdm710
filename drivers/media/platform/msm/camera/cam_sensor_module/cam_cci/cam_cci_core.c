@@ -205,6 +205,10 @@ static void cam_cci_dump_registers(struct cci_device *cci_dev,
 	CAM_INFO(CAM_CCI, "****CCI MASTER %d Registers ****",
 		master);
 	for (i = 0; i < DEBUG_MASTER_REG_COUNT; i++) {
+#ifdef CONFIG_FIH_CAMERA	
+		if (i == 6)
+			continue;
+#endif			
 		reg_offset = DEBUG_MASTER_REG_START + master*0x100 + i * 4;
 		read_val = cam_io_r_mb(base + reg_offset);
 		CAM_INFO(CAM_CCI, "offset = 0x%X value = 0x%X",
@@ -866,6 +870,7 @@ static int32_t cam_cci_data_queue(struct cci_device *cci_dev,
 	return rc;
 }
 
+#ifndef CONFIG_FIH_CAMERA
 static int32_t cam_cci_burst_read(struct v4l2_subdev *sd,
 	struct cam_cci_ctrl *c_ctrl)
 {
@@ -1097,7 +1102,7 @@ rel_mutex:
 	mutex_unlock(&cci_dev->cci_master_info[master].mutex_q[queue]);
 	return rc;
 }
-
+#endif
 static int32_t cam_cci_read(struct v4l2_subdev *sd,
 	struct cam_cci_ctrl *c_ctrl)
 {
@@ -1458,6 +1463,7 @@ static int32_t cam_cci_read_bytes(struct v4l2_subdev *sd,
 	}
 
 	read_bytes = read_cfg->num_byte;
+#ifndef CONFIG_FIH_CAMERA //FIH BSP 20000130 NEW Code -start
 
 	/*
 	 * To avoid any conflicts due to back to back trigger of
@@ -1490,11 +1496,29 @@ static int32_t cam_cci_read_bytes(struct v4l2_subdev *sd,
 				read_cfg->data_type);
 			read_cfg->data += CCI_I2C_MAX_BYTE_COUNT;
 			read_bytes -= CCI_I2C_MAX_BYTE_COUNT;
+#else
+/* LH Modify cci read method-00+{ */
+    CAM_INFO(CAM_CCI, "cci read_bytes: %d", read_bytes);
+	do {
+		if (read_bytes > CCI_READ_MAX)
+			read_cfg->num_byte = CCI_READ_MAX;
+		else
+			read_cfg->num_byte = read_bytes;
+		rc = cam_cci_read(sd, c_ctrl);
+		if (rc < 0) {
+			CAM_ERR(CAM_CCI, "failed rc %d", rc);
+			goto ERROR;
+		}
+		if (read_bytes > CCI_READ_MAX) {
+			read_cfg->addr += CCI_READ_MAX;
+			read_cfg->data += CCI_READ_MAX;
+			read_bytes -= CCI_READ_MAX;
 		} else {
 			read_bytes = 0;
 		}
 	} while (read_bytes);
-
+/* LH Modify cci read method-00+}*/
+#endif //BSP 20000130 NEW Code -end 
 ERROR:
 	cci_dev->is_burst_read = false;
 	return rc;

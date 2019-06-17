@@ -380,8 +380,13 @@ static void cam_actuator_update_req_mgr(
 		CAM_DBG(CAM_ACTUATOR, "Request Id: %lld added to CRM",
 			add_req.req_id);
 	} else {
+#ifdef CONFIG_FIH_CAMERA
+		CAM_DBG(CAM_ACTUATOR, ">>FIH said that it is not a error<< Can't add Request ID: %lld to CRM",
+			csl_packet->header.request_id);
+#else
 		CAM_ERR(CAM_ACTUATOR, "Can't add Request ID: %lld to CRM",
 			csl_packet->header.request_id);
+#endif
 	}
 }
 

@@ -26,7 +26,9 @@ struct cam_req_mgr_core_dev_link_setup;
 struct cam_req_mgr_apply_request;
 struct cam_req_mgr_flush_request;
 struct cam_req_mgr_link_evt_data;
-
+#ifdef CONFIG_FIH_CAMERA
+#define SKIP_NEXT_FRAME 0x100
+#endif
 /* Request Manager -- camera device driver interface */
 /**
  * @brief: camera kernel drivers to cam req mgr communication

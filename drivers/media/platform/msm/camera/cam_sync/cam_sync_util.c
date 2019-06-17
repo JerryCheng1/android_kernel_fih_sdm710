@@ -178,10 +178,15 @@ int cam_sync_deinit_object(struct sync_table_row *table, uint32_t idx)
 	}
 
 	if (row->state == CAM_SYNC_STATE_ACTIVE)
+#ifndef CONFIG_FIH_CAMERA
 		CAM_WARN(CAM_SYNC,
 			"Destroying an active sync object name:%s id:%i",
 			row->name, row->sync_id);
-
+#else
+		CAM_DBG(CAM_SYNC,
+			">>FIH BSP said that it is not a error<< Destroying an active sync object name:%s id:%i",
+			row->name, row->sync_id);
+#endif
 	row->state = CAM_SYNC_STATE_INVALID;
 
 	/* Object's child and parent objects will be added into this list */
