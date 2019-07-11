@@ -112,6 +112,7 @@ dtb-$(CONFIG_ARCH_SDM845) += sdm845-sim.dtb \
 	sdm845-interposer-sdm670-cdp.dtb
 endif
 
+ifneq ($(CONFIG_ARCH_PNX),y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_SDM670) += \
 		sdm670-cdp-overlay.dtbo \
@@ -332,6 +333,28 @@ dtb-$(CONFIG_ARCH_SDM670) += sdm670-rumi.dtb \
 	sxr1130-usbc-mtp.dtb \
 	sxr1130-usbc-pm660a-mtp.dtb \
 	sxr1130-qrd.dtb
+endif
+endif
+
+ifeq ($(CONFIG_ARCH_PNX),y)
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+	dtbo-$(CONFIG_ARCH_SDM670) += \
+		sdm670-cdp-overlay.dtbo \
+		sdm670-mtp-overlay.dtbo \
+		sdm710-cdp-overlay.dtbo \
+		sdm710-mtp-overlay.dtbo
+
+sdm670-cdp-overlay.dtbo-base := sdm670.dtb
+sdm670-mtp-overlay.dtbo-base := sdm670.dtb
+sdm710-cdp-overlay.dtbo-base := sdm710.dtb
+sdm710-mtp-overlay.dtbo-base := sdm710.dtb
+
+else
+dtb-$(CONFIG_ARCH_SDM670) += sdm670-mtp.dtb \
+	sdm670-cdp.dtb \
+	sdm710-mtp.dtb \
+	sdm710-cdp.dtb
+endif
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
