@@ -33,6 +33,11 @@
 
 #include "sde_dbg.h"
 
+#ifdef CONFIG_DRM_DSI_CUSTOMIZE
+#include "dsi_panel.h"
+#include "dsi_customize_init.h"
+#endif
+
 #define DSI_CTRL_DEFAULT_LABEL "MDSS DSI CTRL"
 
 #define DSI_CTRL_TX_TO_MS     200
@@ -1362,6 +1367,19 @@ static int dsi_message_rx(struct dsi_ctrl *dsi_ctrl,
 		short_resp = true;
 		rd_pkt_size = msg->rx_len;
 		total_read_len = 4;
+#ifdef CONFIG_DRM_DSI_CUSTOMIZE
+		if(dsi_always_response_long_package())
+		{
+			short_resp = false;
+			current_read_len = 10;
+			if (msg->rx_len < current_read_len)
+				rd_pkt_size = msg->rx_len;
+			else
+				rd_pkt_size = current_read_len;
+
+			total_read_len = current_read_len + 6;
+		}
+#endif
 	} else {
 		short_resp = false;
 		current_read_len = 10;
@@ -1443,6 +1461,9 @@ static int dsi_message_rx(struct dsi_ctrl *dsi_ctrl,
 		break;
 	case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_1BYTE:
 	case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_1BYTE:
+#ifdef CONFIG_ARCH_PNX
+	case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_3BYTE:
+#endif
 		rc = dsi_parse_short_read1_resp(msg, buff);
 		break;
 	case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_2BYTE:
