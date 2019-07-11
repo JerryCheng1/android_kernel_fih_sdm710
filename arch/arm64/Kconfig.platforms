@@ -324,4 +324,9 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+config ARCH_PNX
+	bool "Nokia PNX model"
+	help
+	  This enables support for Nokia PNX model
+
 endmenu

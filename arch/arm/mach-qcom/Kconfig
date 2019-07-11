@@ -262,5 +262,9 @@ config ARCH_MDM9607
 	select ARM_HAS_SG_CHAIN
 	select HAVE_CLK_PREPARE
 
+config ARCH_PNX
+	bool "Enable Support for FIH PNX"
+	default n
+
 endmenu
 endif
