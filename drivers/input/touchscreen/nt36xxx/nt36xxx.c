@@ -1207,7 +1207,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 
 	NVT_LOG("start\n");
 
-	if (get_Display_ID() != DISPLAY_PANEL_ID_NT36672A_CTC_FHD_VIDEO && get_Display_ID() != DISPLAY_PANEL_ID_NT36672A_TIANMA_FHD_VIDEO)
+	if (get_Display_ID() != 4 && get_Display_ID() != 5)
 	{
 		NVT_ERR("%s: Touch IC is not match!\n", __func__);
 		ret = -ENODEV;

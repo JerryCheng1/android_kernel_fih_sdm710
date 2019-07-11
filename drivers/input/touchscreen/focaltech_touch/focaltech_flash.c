@@ -430,12 +430,14 @@ static int fts_ctpm_check_fw_status(struct i2c_client *client)
 			i2c_noack_retry++;
 			continue;
 		}
-
-		if ((chip_id1 == chip_types.chip_idh)
 #if FTS_CHIP_IDC
+		if ((chip_id1 == chip_types.chip_idh)
 			&& (chip_id2 == chip_types.chip_idl)
-#endif
+
 		   ) {
+#else
+		if (chip_id1 == chip_types.chip_idh) {
+#endif
 			fw_status = FTS_RUN_IN_APP;
 			break;
 		}
