@@ -35,10 +35,20 @@
 #include "pil-q6v5.h"
 #include "pil-msa.h"
 
+#ifdef CONFIG_FIH_MFR
+#include <fih/fih_mfr.h>
+#endif
+
 #define PROXY_TIMEOUT_MS	10000
 #define MAX_SSR_REASON_LEN	256U
 #define STOP_ACK_TIMEOUT_MS	1000
 
+#ifdef CONFIG_ARCH_PNX
+/* SSR_Portng:FIH, to support fih apr { */
+//VNA-3504, add modem failure reason
+char fih_failure_reason[MAX_SSR_REASON_LEN];
+/* SSR_Portng:FIH, to support fih apr } */
+#endif
 #define subsys_to_drv(d) container_of(d, struct modem_data, subsys_desc)
 
 static void log_modem_sfr(void)
@@ -59,6 +69,17 @@ static void log_modem_sfr(void)
 
 	strlcpy(reason, smem_reason, min(size, MAX_SSR_REASON_LEN));
 	pr_err("modem subsystem failure reason: %s.\n", reason);
+#ifdef CONFIG_ARCH_PNX
+#ifdef CONFIG_FIH_MFR
+	fih_mfr_update(reason);
+#endif
+
+	/*SSR_Portng:FIH, to support fih apr { */
+	//VNA-3504, add modem failure reason
+	strlcpy(fih_failure_reason, smem_reason, min(size, MAX_SSR_REASON_LEN));
+	//pr_err("fih get failure reason: %s.\n", fih_failure_reason);
+	/*SSR_Portng:FIH, to support fih apr } */
+#endif
 }
 
 static void restart_modem(struct modem_data *drv)
@@ -210,7 +231,10 @@ static int pil_subsys_init(struct modem_data *drv,
 					struct platform_device *pdev)
 {
 	int ret = -EINVAL;
-
+#ifdef CONFIG_ARCH_PNX
+	//SSR_Portng: init the fih_failure_reason to support fih apr
+	fih_failure_reason[0] = '\0';
+#endif
 	drv->subsys_desc.name = "modem";
 	drv->subsys_desc.dev = &pdev->dev;
 	drv->subsys_desc.owner = THIS_MODULE;
