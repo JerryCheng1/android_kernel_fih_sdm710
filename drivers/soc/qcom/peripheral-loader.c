@@ -939,6 +939,10 @@ static int pil_notify_aop(struct pil_desc *desc, char *status)
 	return mbox_send_message(desc->mbox, &pkt);
 }
 
+#ifdef CONFIG_ARCH_PNX
+static bool fih_nv_assigned = false;
+#endif
+
 /* Synchronize request_firmware() with suspend */
 static DECLARE_RWSEM(pil_pm_rwsem);
 
@@ -1081,7 +1085,24 @@ int pil_boot(struct pil_desc *desc)
 		}
 		hyp_assign = false;
 	}
-
+#ifdef CONFIG_ARCH_PNX
+	pr_notice("%s: %s\n", __func__, desc->name);
+	if (!(strncmp(desc->name, "modem", sizeof(char)*5))) {
+		if (!fih_nv_assigned) {
+				pr_notice("%s: Assign %s fih_nv_mem memory \n", __func__, desc->name);
+				ret = pil_assign_mem_to_subsys_and_linux(desc, 0xAF000000, 0x00800000);
+				if (ret) {
+					pr_notice("%s: Assign %s fih_nv_mem memory Error !!\n", __func__, desc->name);
+					fih_nv_assigned = false;
+					pil_err(desc, "Failed to assign %s fih_nv_mem memory, ret - %d\n", desc->name, ret);
+					goto err_deinit_image;
+				}
+			fih_nv_assigned = true;
+		} else {
+			pr_notice("%s: Assign %s fih_nv_mem memory (re-init)\n", __func__, desc->name);
+		}
+	}
+#endif
 	trace_pil_event("before_auth_reset", desc);
 	ret = desc->ops->auth_and_reset(desc);
 	if (ret) {
