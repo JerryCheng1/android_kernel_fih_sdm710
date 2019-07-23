@@ -20,7 +20,11 @@
 #include <linux/pmic-voter.h>
 #include "step-chg-jeita.h"
 
+#if defined(CONFIG_FIH_BATTERY)
+#define MAX_STEP_CHG_ENTRIES	4
+#else
 #define MAX_STEP_CHG_ENTRIES	8
+#endif /* CONFIG_FIH_BATTERY */
 #define STEP_CHG_VOTER		"STEP_CHG_VOTER"
 #define JEITA_VOTER		"JEITA_VOTER"
 
@@ -285,6 +289,15 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 		chip->step_chg_cfg_valid = false;
 	}
 
+#if defined(CONFIG_FIH_BATTERY)
+	rc = of_property_read_u32(profile_node, "fih,step-chg-hysteresis",
+					&chip->step_chg_config->hysteresis);
+	if (rc < 0) {
+		pr_err("Read fih,step-chg-hysteresis failed, rc=%d\n", rc);
+		chip->step_chg_cfg_valid = false;
+	}
+#endif /* CONFIG_FIH_BATTERY */
+
 	chip->sw_jeita_cfg_valid = true;
 	rc = read_range_data_from_node(profile_node,
 			"qcom,jeita-fcc-ranges",
@@ -296,6 +309,15 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 		chip->sw_jeita_cfg_valid = false;
 	}
 
+#if defined(CONFIG_FIH_BATTERY)
+	rc = of_property_read_u32(profile_node, "fih,jeita-hysteresis",
+					&chip->jeita_fcc_config->hysteresis);
+	if (rc < 0) {
+		pr_err("Read fih,jeita-hysteresis failed, rc=%d\n", rc);
+		chip->sw_jeita_cfg_valid = false;
+	}
+#endif /* CONFIG_FIH_BATTERY */
+
 	rc = read_range_data_from_node(profile_node,
 			"qcom,jeita-fv-ranges",
 			chip->jeita_fv_config->fv_cfg,
@@ -305,6 +327,15 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 					rc);
 		chip->sw_jeita_cfg_valid = false;
 	}
+
+#if defined(CONFIG_FIH_BATTERY)
+	rc = of_property_read_u32(profile_node, "fih,jeita-hysteresis",
+					&chip->jeita_fv_config->hysteresis);
+	if (rc < 0) {
+		pr_err("Read fih,jeita-hysteresis failed, rc=%d\n", rc);
+		chip->sw_jeita_cfg_valid = false;
+	}
+#endif /* CONFIG_FIH_BATTERY */
 
 	return rc;
 }
@@ -441,6 +472,9 @@ static int handle_step_chg_config(struct step_chg_info *chip)
 	union power_supply_propval pval = {0, };
 	int rc = 0, fcc_ua = 0;
 	u64 elapsed_us;
+#if defined(CONFIG_FIH_BATTERY)
+	int current_step_index = chip->step_index;
+#endif /* CONFIG_FIH_BATTERY */
 
 	elapsed_us = ktime_us_delta(ktime_get(), chip->step_last_update_time);
 	if (elapsed_us < STEP_CHG_HYSTERISIS_DELAY_US)
@@ -487,6 +521,9 @@ static int handle_step_chg_config(struct step_chg_info *chip)
 
 	vote(chip->fcc_votable, STEP_CHG_VOTER, true, fcc_ua);
 
+#if defined(CONFIG_FIH_BATTERY)
+	if (current_step_index != chip->step_index)
+#endif /* CONFIG_FIH_BATTERY */
 	pr_debug("%s = %d Step-FCC = %duA\n",
 		chip->step_chg_config->prop_name, pval.intval, fcc_ua);
 
@@ -505,6 +542,11 @@ static int handle_jeita(struct step_chg_info *chip)
 	union power_supply_propval pval = {0, };
 	int rc = 0, fcc_ua = 0, fv_uv = 0;
 	u64 elapsed_us;
+#if defined(CONFIG_FIH_BATTERY)
+	int current_jeita_fcc_index = chip->jeita_fcc_index;
+	int current_jeita_fv_index = chip->jeita_fv_index;
+	struct votable *sw_jeita_recover_votable;
+#endif /* CONFIG_FIH_BATTERY */
 
 	rc = power_supply_get_property(chip->batt_psy,
 		POWER_SUPPLY_PROP_SW_JEITA_ENABLED, &pval);
@@ -565,6 +607,8 @@ static int handle_jeita(struct step_chg_info *chip)
 	if (!chip->fv_votable)
 		goto update_time;
 
+//This is workaround solution and wait QC (03694182) provide the final solution.
+#ifndef CONFIG_FIH_BATTERY
 	if (!chip->usb_icl_votable)
 		chip->usb_icl_votable = find_votable("USB_ICL");
 
@@ -596,7 +640,22 @@ static int handle_jeita(struct step_chg_info *chip)
 	}
 
 set_jeita_fv:
+#endif /* CONFIG_FIH_BATTERY */
+
 	vote(chip->fv_votable, JEITA_VOTER, fv_uv ? true : false, fv_uv);
+#if defined(CONFIG_FIH_BATTERY)
+	if (current_jeita_fv_index != chip->jeita_fv_index) {
+		sw_jeita_recover_votable = find_votable("SW_JEITA_RECOVER");
+		if (sw_jeita_recover_votable) {
+			vote(sw_jeita_recover_votable, JEITA_VOTER, true, fv_uv);
+		}
+	}
+
+	if (current_jeita_fcc_index != chip->jeita_fcc_index ||
+	    current_jeita_fv_index != chip->jeita_fv_index)
+	pr_debug("%s = %d FCC = %duA FV = %duV\n",
+		chip->jeita_fcc_config->prop_name, pval.intval, fcc_ua, fv_uv);
+#endif /* CONFIG_FIH_BATTERY */
 
 update_time:
 	chip->jeita_last_update_time = ktime_get();

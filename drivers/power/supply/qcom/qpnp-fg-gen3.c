@@ -959,6 +959,25 @@ static const char *fg_get_battery_type(struct fg_chip *chip)
 	return DEFAULT_BATT_TYPE;
 }
 
+#ifdef CONFIG_FIH_BATTERY
+#define DEFAULT_BATT_MANU	"Unknown"
+#define LOADING_BATT_MANU	"Loading"
+static const char *fg_get_batt_manufacturer(struct fg_chip *chip)
+{
+	if (chip->battery_missing)
+		return DEFAULT_BATT_MANU;
+
+	if (chip->bp.batt_manufacturer) {
+		if (chip->profile_loaded)
+			return chip->bp.batt_manufacturer;
+		else if (chip->profile_available)
+			return LOADING_BATT_MANU;
+	}
+
+	return DEFAULT_BATT_MANU;
+}
+#endif
+
 static int fg_batt_missing_config(struct fg_chip *chip, bool enable)
 {
 	int rc;
@@ -1062,6 +1081,22 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 		pr_err("No profile data available\n");
 		return -ENODATA;
 	}
+
+#ifdef CONFIG_FIH_BATTERY
+	rc = of_property_read_string(profile_node, "fih,batt-manufacturer",
+			&chip->bp.batt_manufacturer);
+	if (rc < 0) {
+		pr_err("batt manufacturer unavailable, rc:%d\n", rc);
+		chip->bp.batt_manufacturer = DEFAULT_BATT_MANU;
+	}
+
+	rc = of_property_read_u32(profile_node, "fih,warm-recharge-voltage-uv",
+			&chip->bp.warm_rechg_volt_uv);
+	if (rc < 0) {
+		pr_err("battery float voltage unavailable, rc:%d\n", rc);
+		chip->bp.warm_rechg_volt_uv = 0;
+	}
+#endif
 
 	if (len != PROFILE_LEN) {
 		pr_err("battery profile incorrect size: %d\n", len);
@@ -1788,6 +1823,9 @@ static int fg_set_recharge_voltage(struct fg_chip *chip, int voltage_mv)
 	if (voltage_mv == chip->last_recharge_volt_mv)
 		return 0;
 
+#ifdef CONFIG_FIH_BATTERY
+	pr_debug("Setting recharge voltage to %dmV\n", voltage_mv);
+#endif
 	fg_dbg(chip, FG_STATUS, "Setting recharge voltage to %dmV\n",
 		voltage_mv);
 	fg_encode(chip->sp, FG_SRAM_RECHARGE_VBATT_THR, voltage_mv, &buf);
@@ -2193,6 +2231,9 @@ static int fg_adjust_recharge_soc(struct fg_chip *chip)
 static int fg_adjust_recharge_voltage(struct fg_chip *chip)
 {
 	int rc, recharge_volt_mv;
+#ifdef CONFIG_FIH_BATTERY
+	struct votable *fv_votable;
+#endif
 
 	if (chip->dt.auto_recharge_soc)
 		return 0;
@@ -2202,6 +2243,13 @@ static int fg_adjust_recharge_voltage(struct fg_chip *chip)
 
 	recharge_volt_mv = chip->dt.recharge_volt_thr_mv;
 
+#ifdef CONFIG_FIH_BATTERY
+	if (chip->bp.warm_rechg_volt_uv) {
+		fv_votable = find_votable("FV");
+		if (fv_votable && get_effective_result(fv_votable) != chip->bp.float_volt_uv)
+			recharge_volt_mv = chip->bp.warm_rechg_volt_uv / 1000;
+	} else
+#endif
 	/* Lower the recharge voltage in soft JEITA */
 	if (chip->health == POWER_SUPPLY_HEALTH_WARM ||
 			chip->health == POWER_SUPPLY_HEALTH_COOL)
@@ -4084,6 +4132,11 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CC_STEP_SEL:
 		pval->intval = chip->ttf.cc_step.sel;
 		break;
+#ifdef CONFIG_FIH_BATTERY
+	case POWER_SUPPLY_PROP_MANUFACTURER:
+		pval->strval = fg_get_batt_manufacturer(chip);
+		break;
+#endif
 	default:
 		pr_err("unsupported property %d\n", psp);
 		rc = -EINVAL;
@@ -4286,6 +4339,9 @@ static enum power_supply_property fg_psy_props[] = {
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE,
 	POWER_SUPPLY_PROP_CC_STEP,
 	POWER_SUPPLY_PROP_CC_STEP_SEL,
+#ifdef CONFIG_FIH_BATTERY
+	POWER_SUPPLY_PROP_MANUFACTURER,
+#endif
 };
 
 static const struct power_supply_desc fg_psy_desc = {
